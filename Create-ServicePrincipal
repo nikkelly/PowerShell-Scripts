@@ -1,0 +1,61 @@
+<#
+Azure Automation Service Principal
+
+DESCRIPTION: Create a service principal and private key to use for authentication.
+
+MODULES USED:
+Microsoft.Graph.Authentication
+Microsoft.Graph.Users.Actions
+
+#>
+# Define the name of the service principal and certificate
+$spName = Read-Host -Prompt 'Input the name for the service principal and certificate'
+$myPassword = Read-Host -Prompt 'Password for private key'
+
+# Create a new service principal
+$sp = New-AzADServicePrincipal -DisplayName $spName
+
+# Create a new self-signed certificate
+$cert = New-SelfSignedCertificate -Subject "CN=$spName" -CertStoreLocation 'Cert:\CurrentUser\My' -KeyExportPolicy Exportable -KeySpec Signature -KeyLength 2048 -KeyAlgorithm RSA -HashAlgorithm SHA256
+
+# Create a password for your certificate private key and save it in a variable
+$mypwd = ConvertTo-SecureString -String "$myPassword" -Force -AsPlainText  ## Replace $myPassword
+
+# Export the certificate with its private key as .pfx
+$certFilePath = "$home\documents\$spName.pfx" # replace with your preferred location
+Export-PfxCertificate -Cert $cert -FilePath $certFilePath -Password $mypwd
+
+# Get the certificate value
+$certificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certFilePath, "$myPassword") # Replace $myPassword
+$rawCertData = $certificate.GetRawCertData()
+$credentialValue = [System.Convert]::ToBase64String($rawCertData)
+
+# Create a new service principal credential with the certificate
+$endDate = $certificate.NotAfter
+Get-AzADApplication -ApplicationId $sp.AppId | New-AzADAppCredential -CertValue $credentialValue -EndDate $endDate
+
+# Output the Azure AD Application ID, Tenant ID, Certificate Thumbprint and Subscription ID
+Write-Output "Azure AD Application ID: $($sp.AppId)"
+Write-Output "Azure AD Tenant ID: $((Get-AzContext).Tenant.Id)"
+Write-Output "Certificate Thumbprint: $($cert.Thumbprint)"
+Write-Output "Subscription ID: $((Get-AzSubscription).Id)"
+
+Write-Output "Upload the certificate from $certFilePath to Azure Automation before proceeding"
+$confirmation = Read-Host 'Do you want to delete the local certificate? (Y/N)'
+
+if ($confirmation -eq 'Y' -or $confirmation -eq 'y') {
+  Write-Host 'Deleting local certificate...'
+  # Cleanup activities
+  # Delete the certificate file
+  Remove-Item -Path $certFilePath
+
+  # Optional: Delete the certificate from the keystore
+  # Get the certificate thumbprint
+  $thumbprint = (Get-ChildItem -Path 'Cert:\CurrentUser\My' | Where-Object { $_.Subject -Match "$spName" } | Select-Object -ExpandProperty Thumbprint)
+
+  # Delete the certificate and its private key
+  Remove-Item -Path "Cert:\CurrentUser\My\$thumbprint" -DeleteKey
+} else {
+  Write-Host 'Exiting...'
+  exit
+}
