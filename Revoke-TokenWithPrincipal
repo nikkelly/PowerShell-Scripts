@@ -1,0 +1,17 @@
+# https://learn.microsoft.com/en-us/powershell/module/?view=azps-10.0.0
+param (
+    [Parameter(Mandatory=$true)]
+    [string] $UserInput
+)
+Import-Module Microsoft.Graph.Users.Actions
+# Get the automation connection
+$connection = Get-AutomationConnection -Name 'test-certauth'
+
+# Connect to Azure AD
+$tenantId = $connection.TenantId
+$appId = $connection.ApplicationId
+$certThumbprint = $connection.CertificateThumbprint
+Connect-MgGraph -ClientId $appId -TenantId $tenantId -CertificateThumbprint $certThumbprint
+
+# https://office365itpros.com/2023/04/18/revoke-access-for-azure-ad-account/
+Revoke-MgUserSignInSession -UserID $UserInput
