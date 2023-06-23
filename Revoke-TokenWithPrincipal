@@ -1,4 +1,11 @@
-# https://learn.microsoft.com/en-us/powershell/module/?view=azps-10.0.0
+<#
+https://learn.microsoft.com/en-us/powershell/module/?view=azps-10.0.0
+https://office365itpros.com/2023/04/18/revoke-access-for-azure-ad-account/
+
+MODULES USED:
+Microsoft.Graph.Authentication
+Microsoft.Graph.Users.Actions
+#> 
 param (
     [Parameter(Mandatory=$true)]
     [string] $UserInput
@@ -13,5 +20,4 @@ $appId = $connection.ApplicationId
 $certThumbprint = $connection.CertificateThumbprint
 Connect-MgGraph -ClientId $appId -TenantId $tenantId -CertificateThumbprint $certThumbprint
 
-# https://office365itpros.com/2023/04/18/revoke-access-for-azure-ad-account/
 Revoke-MgUserSignInSession -UserID $UserInput
