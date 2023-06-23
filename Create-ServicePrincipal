@@ -3,10 +3,6 @@ Azure Automation Service Principal
 
 DESCRIPTION: Create a service principal and private key to use for authentication.
 
-MODULES USED:
-Microsoft.Graph.Authentication
-Microsoft.Graph.Users.Actions
-
 #>
 # Define the name of the service principal and certificate
 $spName = Read-Host -Prompt 'Input the name for the service principal and certificate'
